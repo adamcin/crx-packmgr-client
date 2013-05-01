@@ -1,7 +1,5 @@
 package net.adamcin.packmgr;
 
-public interface SimpleResponse {
-    boolean isSuccess();
-    String getMessage();
+public interface SimpleResponse extends ServiceResponse {
     String getPath();
 }

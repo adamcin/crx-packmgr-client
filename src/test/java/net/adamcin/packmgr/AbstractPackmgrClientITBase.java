@@ -108,7 +108,7 @@ public abstract class AbstractPackmgrClientITBase {
 
                 assertFalse("package should not exist on server", client.existsOnServer(id));
 
-                LOGGER.info("uploading: {}", client.upload(file, id, true));
+                LOGGER.info("uploading: {}", client.upload(file, true, id));
 
                 assertTrue("package should exist on server", client.existsOnServer(id));
 

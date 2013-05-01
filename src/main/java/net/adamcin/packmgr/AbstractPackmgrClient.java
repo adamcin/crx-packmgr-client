@@ -6,17 +6,27 @@ import org.json.JSONTokener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * The AbstractPackmgrClient provides constants and concrete implementations for generic method logic and response
  * handling.
  */
 public abstract class AbstractPackmgrClient implements PackmgrClient {
-    protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractPackmgrClient.class);
+
+    public static final ResponseProgressListener DEFAULT_LISTENER = new ResponseProgressListener() {
+        @Override public void onStart(String title) { }
+        @Override public void onLog(String message) { }
+        @Override public void onMessage(String message) { }
+        @Override public void onProgress(String action, String path) { }
+        @Override public void onError(String path, String error) { }
+    };
 
     public static final String SERVICE_BASE_PATH = "/crx/packmgr/service";
     public static final String HTML_SERVICE_PATH = SERVICE_BASE_PATH + "/console.html";
@@ -48,7 +58,13 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
     public static final String CMD_DELETE = "delete";
     public static final String CMD_REPLICATE = "replicate";
 
+    private static final Pattern PATTERN_TITLE = Pattern.compile("^<body><h2>([^<]*)</h2>");
+    private static final Pattern PATTERN_LOG = Pattern.compile("^([^<]*<br>)+");
+    private static final Pattern PATTERN_MESSAGE = Pattern.compile("<span class=\"([^\"]*)\"><b>([^<]*)</b>&nbsp;([^<(]*)(\\([^)]*\\))?</span>");
+    private static final Pattern PATTERN_SUCCESS = Pattern.compile("^</div><br>(.*) in (\\d+)ms\\.<br>");
+
     private String baseUrl = DEFAULT_BASE_URL;
+
 
     public void setBaseUrl(String baseUrl) {
         if (baseUrl == null) {
@@ -97,7 +113,152 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
      */
     protected abstract Either<? extends Exception, Boolean> checkServiceAvailability(boolean checkTimeout, long timeoutRemaining);
 
-    protected static final SimpleResponse parseSimpleResponse(final int statusCode,
+    private static boolean handleStart(String line, ResponseProgressListener listener) {
+        if (line.startsWith("<body>")) {
+            Matcher titleMatcher = PATTERN_TITLE.matcher(line);
+            if (titleMatcher.find()) {
+                listener.onStart(titleMatcher.group(1));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static DetailedResponse handleSuccess(String line, List<String> progressErrors) {
+        if (line.startsWith("</div>")) {
+            String message = "";
+            long duration = -1L;
+            Matcher successMatcher = PATTERN_SUCCESS.matcher(line);
+            if (successMatcher.find()) {
+                message = successMatcher.group(1);
+                try {
+                    duration = Long.valueOf(successMatcher.group(2));
+                } catch (Exception e) { }
+                return new DetailedResponseImpl(true, message, duration, progressErrors);
+            }
+        }
+        return null;
+    }
+
+    private static DetailedResponse handleFailure(String line, StringBuilder failureBuilder, List<String> progressErrors) {
+        if (line.startsWith("</pre>")) {
+            return new DetailedResponseImpl(false, failureBuilder.toString().trim(), -1, progressErrors);
+        } else {
+            // assume line is part of stack trace
+            failureBuilder.append(line).append(File.separator);
+        }
+        return null;
+    }
+
+    private static void handleLogs(String line, ResponseProgressListener listener) {
+        if (!line.startsWith("<span")) {
+            Matcher logMatcher = PATTERN_LOG.matcher(line);
+            if (logMatcher.find()) {
+                String logs = logMatcher.group(1);
+                for (String log : logs.split("<br>")) {
+                    if (!log.isEmpty()) {
+                        listener.onLog(log);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void handleMessage(String line, List<String> progressErrors, ResponseProgressListener listener) {
+        Matcher messageMatcher = PATTERN_MESSAGE.matcher(line);
+        if (messageMatcher.find()) {
+            String action = messageMatcher.group(1);
+            String path = messageMatcher.group(3);
+            String error = messageMatcher.group(4);
+            if ("E".equals(action)) {
+                progressErrors.add(path + error);
+                listener.onError(path.trim(), error);
+            } else if (action.length() == 1) {
+                listener.onProgress(action, path.trim());
+            } else {
+                listener.onMessage(action);
+            }
+        }
+    }
+
+    private static boolean handleBeginFailure(String line) {
+        return line.endsWith("<span class=\"error\">Error during processing.</span><br><code><pre>");
+    }
+
+    protected static DetailedResponse parseDetailedResponse(final int statusCode,
+                                                                  final String statusText,
+                                                                  final InputStream stream,
+                                                                  final String charset,
+                                                                  final ResponseProgressListener listener)
+        throws IOException {
+
+        if (statusCode == 400) {
+            throw new IOException("Command not supported by service");
+        } else if (statusCode / 100 != 2) {
+            throw new IOException(Integer.toString(statusCode) + " " + statusText);
+        } else {
+            final ResponseProgressListener _listener = listener == null ? DEFAULT_LISTENER : listener;
+
+            BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new InputStreamReader(stream, charset));
+                boolean isFailure = false;
+                boolean isStarted = false;
+                final StringBuilder failureBuilder = new StringBuilder();
+                final List<String> progressErrors = new ArrayList<String>();
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    LOGGER.debug("[parseDetailedResponse] line={}", line);
+                    if (isFailure) {
+
+                        // handle failure end line
+                        DetailedResponse response = handleFailure(line, failureBuilder, progressErrors);
+                        if (response != null) {
+                            return response;
+                        }
+
+                    } else {
+
+                        if (!isStarted) {
+                            // handle title line
+                            if (handleStart(line, _listener)) {
+                                isStarted = true;
+                            }
+                        }
+
+                        if (isStarted) {
+                            // handle success line
+                            DetailedResponse response = handleSuccess(line, progressErrors);
+                            if (response != null) {
+                                return response;
+                            }
+
+                            // handle log statements
+                            handleLogs(line, _listener);
+
+                            // handle progress message
+                            handleMessage(line, progressErrors, _listener);
+
+                            if (handleBeginFailure(line)) {
+                                isFailure = true;
+                            }
+                        }
+                    }
+                }
+
+                // throw an exception if neither success or failure was returned
+                throw new IOException("Failed to parse service response");
+
+            } finally {
+                if (reader != null) {
+                    reader.close();
+                }
+            }
+        }
+    }
+
+    protected static SimpleResponse parseSimpleResponse(final int statusCode,
                                                        final String statusText,
                                                        final InputStream stream,
                                                        final String charset)
@@ -115,14 +276,7 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
                 final String message = json.has(KEY_MESSAGE) ? json.getString(KEY_MESSAGE) : "";
                 final String path = json.has(KEY_PATH) ? json.getString(KEY_PATH) : "";
 
-                return new SimpleResponse() {
-                    @Override public boolean isSuccess() { return success; }
-                    @Override public String getMessage() { return message; }
-                    @Override public String getPath() { return path; }
-                    @Override public String toString() {
-                        return "{success:" + success + ", msg:\"" + message + "\", path:\"" + path + "\"}";
-                    }
-                };
+                return new SimpleResponseImpl(success, message, path);
             } catch (JSONException e) {
                 throw new IOException("Exception encountered while parsing response.", e);
             }
@@ -193,5 +347,71 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
 
     protected static <T, U> Either<T, U> right(Class<T> left, U right) {
         return new Right<T, U>(right);
+    }
+
+    static class DetailedResponseImpl implements DetailedResponse {
+        final boolean success;
+        final String message;
+        final long duration;
+        final List<String> progressErrors;
+
+        DetailedResponseImpl(boolean success, String message, long duration, List<String> progressErrors) {
+            this.success = success;
+            this.message = message;
+            this.duration = duration;
+            List<String> _progressErrors = progressErrors == null ? new ArrayList<String>() : progressErrors;
+            this.progressErrors = Collections.unmodifiableList(_progressErrors);
+        }
+
+        @Override public long getDuration() {
+            return duration;
+        }
+
+        @Override public List<String> getProgressErrors() {
+            return progressErrors;
+        }
+
+        @Override public boolean isSuccess() {
+            return success;
+        }
+
+        @Override public String getMessage() {
+            return message;
+        }
+
+        @Override public String toString() {
+            return "{success:" + success +
+                    ", msg:\"" + message +
+                    "\", duration:\"" + duration +
+                    "\", hasErrors:" + !progressErrors.isEmpty() + "}";
+        }
+    }
+
+    static class SimpleResponseImpl implements SimpleResponse {
+        final boolean success;
+        final String message;
+        final String path;
+
+        SimpleResponseImpl(boolean success, String message, String path) {
+            this.success = success;
+            this.message = message;
+            this.path = path == null ? "" : path;
+        }
+
+        @Override public boolean isSuccess() {
+            return success;
+        }
+
+        @Override public String getMessage() {
+            return message;
+        }
+
+        @Override public String getPath() {
+            return path;
+        }
+
+        @Override public String toString() {
+            return "{success:" + success + ", msg:\"" + message + "\", path:\"" + path + "\"}";
+        }
     }
 }

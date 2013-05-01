@@ -2,17 +2,18 @@ package net.adamcin.packmgr.async;
 
 import com.ning.http.client.*;
 import com.ning.http.multipart.FilePart;
-import net.adamcin.packmgr.ACHandling;
-import net.adamcin.packmgr.AbstractPackmgrClient;
-import net.adamcin.packmgr.PackId;
-import net.adamcin.packmgr.SimpleResponse;
+import net.adamcin.packmgr.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public final class AsyncPackmgrClient extends AbstractPackmgrClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AsyncPackmgrClient.class);
 
     public static final Realm DEFAULT_REALM = new Realm.RealmBuilder()
             .setPrincipal(DEFAULT_USERNAME)
@@ -76,8 +77,25 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
         return this.client.executeRequest(request, AUTHORIZED_RESPONSE_HANDLER);
     }
 
-    private ListenableFuture<SimpleResponse> executeSimpleRequest(Request request) throws IOException {
-        return this.client.executeRequest(request, SIMPLE_RESPONSE_HANDLER);
+    private SimpleResponse executeSimpleRequest(Request request)
+            throws IOException, InterruptedException, ExecutionException {
+
+        return this.client.executeRequest(request, SIMPLE_RESPONSE_HANDLER).get();
+    }
+
+    private DetailedResponse executeDetailedRequest(final Request request, final ResponseProgressListener listener)
+        throws IOException, InterruptedException, ExecutionException {
+
+        return this.client.executeRequest(request, new AsyncCompletionHandler<DetailedResponse>(){
+            @Override public DetailedResponse onCompleted(Response response) throws Exception {
+                return AbstractPackmgrClient.parseDetailedResponse(
+                        response.getStatusCode(),
+                        response.getStatusText(),
+                        response.getResponseBodyAsStream(),
+                        getResponseEncoding(response),
+                        listener);
+            }
+        }).get();
     }
 
     /**
@@ -114,6 +132,15 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
         }
     }
 
+    private RequestBuilder buildDetailedRequest(PackId packageId) {
+        RequestBuilder builder = new RequestBuilder("POST").setRealm(realm);
+        if (packageId != null) {
+            return builder.setUrl(getHtmlUrl(packageId));
+        } else {
+            return builder.setUrl(getHtmlUrl());
+        }
+    }
+
     private static String getResponseEncoding(Response response) {
         String encoding = response.getHeader("Content-Encoding");
 
@@ -136,11 +163,11 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
 
         Request request = buildSimpleRequest(packageId).addParameter(KEY_CMD, CMD_CONTENTS).build();
 
-        return executeSimpleRequest(request).get().isSuccess();
+        return executeSimpleRequest(request).isSuccess();
     }
 
     @Override
-    public SimpleResponse upload(final File file, final PackId packageId, final boolean force) throws Exception {
+    public SimpleResponse upload(final File file, final boolean force, final PackId packageId) throws Exception {
         if (file == null) {
             throw new NullPointerException("file");
         }
@@ -152,19 +179,25 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
                 .addQueryParameter(KEY_FORCE, Boolean.toString(force))
                 .addBodyPart(new FilePart(KEY_PACKAGE, file, MIME_ZIP, null)).build();
 
-        return executeSimpleRequest(request).get();
+        return executeSimpleRequest(request);
     }
 
     @Override
-    public SimpleResponse install(final PackId packageId,
+    public DetailedResponse install(final PackId packageId,
                                   final boolean recursive,
                                   final int autosave,
                                   final ACHandling acHandling) throws Exception {
+        return this.install(packageId, recursive, autosave, acHandling, null);
+    }
+
+    @Override
+    public DetailedResponse install(PackId packageId, boolean recursive, int autosave, ACHandling acHandling,
+                                    ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        RequestBuilder request = buildSimpleRequest(packageId)
+        RequestBuilder request = buildDetailedRequest(packageId)
                 .addParameter(KEY_CMD, CMD_INSTALL)
                 .addParameter(KEY_RECURSIVE, Boolean.toString(recursive))
                 .addParameter(KEY_AUTOSAVE, Integer.toString(Math.max(autosave, MIN_AUTOSAVE)));
@@ -173,42 +206,57 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
             request.addParameter(KEY_ACHANDLING, acHandling.name().toLowerCase());
         }
 
-        return executeSimpleRequest(request.build()).get();
+        return executeDetailedRequest(request.build(), listener);
     }
 
     @Override
-    public SimpleResponse build(final PackId packageId) throws Exception {
+    public DetailedResponse build(PackId packageId) throws Exception {
+        return this.build(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse build(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        Request request = buildSimpleRequest(packageId)
+        Request request = buildDetailedRequest(packageId)
                 .addParameter(KEY_CMD, CMD_BUILD).build();
 
-        return executeSimpleRequest(request).get();
+        return executeDetailedRequest(request, listener);
     }
 
     @Override
-    public SimpleResponse rewrap(PackId packageId) throws Exception {
+    public DetailedResponse rewrap(final PackId packageId) throws Exception {
+        return this.rewrap(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse rewrap(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        Request request = buildSimpleRequest(packageId)
+        Request request = buildDetailedRequest(packageId)
                 .addParameter(KEY_CMD, CMD_REWRAP).build();
 
-        return executeSimpleRequest(request).get();
+        return executeDetailedRequest(request, listener);
     }
 
     @Override
-    public SimpleResponse uninstall(PackId packageId) throws Exception {
+    public DetailedResponse uninstall(final PackId packageId) throws Exception {
+        return this.uninstall(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse uninstall(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        Request request = buildSimpleRequest(packageId).addParameter(KEY_CMD, CMD_UNINSTALL).build();
+        Request request = buildDetailedRequest(packageId).addParameter(KEY_CMD, CMD_UNINSTALL).build();
 
-        return executeSimpleRequest(request).get();
+        return executeDetailedRequest(request, listener);
     }
 
     @Override
@@ -219,18 +267,23 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
 
         Request request = buildSimpleRequest(packageId).addParameter(KEY_CMD, CMD_DELETE).build();
 
-        return executeSimpleRequest(request).get();
+        return executeSimpleRequest(request);
     }
 
     @Override
-    public SimpleResponse dryRun(PackId packageId) throws Exception {
+    public DetailedResponse dryRun(final PackId packageId) throws Exception {
+        return this.dryRun(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse dryRun(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        Request request = buildSimpleRequest(packageId).addParameter(KEY_CMD, CMD_DRY_RUN).build();
+        Request request = buildDetailedRequest(packageId).addParameter(KEY_CMD, CMD_DRY_RUN).build();
 
-        return executeSimpleRequest(request).get();
+        return executeDetailedRequest(request, listener);
     }
 
     @Override
@@ -241,7 +294,7 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
 
         Request request = buildSimpleRequest(packageId).addParameter(KEY_CMD, CMD_REPLICATE).build();
 
-        return executeSimpleRequest(request).get();
+        return executeSimpleRequest(request);
     }
 
     abstract class AuthorizedResponseHandler<T> extends AsyncCompletionHandler<T> {

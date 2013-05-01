@@ -29,24 +29,82 @@ public interface PackmgrClient {
      * Checks if a package with the specified packageId has already been uploaded to the server. This does not indicate
      * whether the package has already been installed.
      * @param packageId
-     * @return
+     * @return {@code true} if a package exists, {@code false} otherwise
      * @throws Exception
      */
     boolean existsOnServer(PackId packageId) throws Exception;
 
-    SimpleResponse upload(File file, PackId packageId, boolean force) throws Exception;
+    /**
+     * Upload a package to the server. Does not install the package once uploaded.
+     * @param file the package file to be uploaded
+     * @param force set to {@code true} for the uploaded file to replace an existing package on the server that has the
+     *              same id. If {@code false}
+     * @param packageId optional {@link PackId} providing the installation path. If {@code null}, the {@code file} will
+     *                  be identified and that {@link PackId} will be used
+     * @return standard simple service response
+     * @throws Exception
+     */
+    SimpleResponse upload(File file, boolean force, PackId packageId) throws Exception;
 
+    /**
+     * Delete a package from the server. Does not uninstall the package.
+     * @param packageId {@link PackId} representing package to be deleted
+     * @return standard simple service response
+     * @throws Exception
+     */
     SimpleResponse delete(PackId packageId) throws Exception;
 
-    SimpleResponse install(PackId packageId, boolean recursive, int autosave, ACHandling acHandling) throws Exception;
-
-    SimpleResponse dryRun(PackId packageId) throws Exception;
-
-    SimpleResponse build(PackId packageId) throws Exception;
-
-    SimpleResponse rewrap(PackId packageId) throws Exception;
-
-    SimpleResponse uninstall(PackId packageId) throws Exception;
-
+    /**
+     *
+     * @param packageId
+     * @return
+     * @throws Exception
+     */
     SimpleResponse replicate(PackId packageId) throws Exception;
+
+    /**
+     * Install a package that has already been uploaded to the server.
+     * @param packageId {@link PackId} representing package to be installed
+     * @param recursive set to {@code true} to also install subpackages
+     * @param autosave number of changes between session saves.
+     * @param acHandling Access Control Handling value {@link ACHandling}. Unspecified if {@code null}.
+     * @return detailed service response
+     * @throws Exception
+     */
+    DetailedResponse install(PackId packageId, boolean recursive, int autosave, ACHandling acHandling) throws Exception;
+
+     /**
+     * Install a package that has already been uploaded to the server.
+     * @param packageId {@link PackId} representing package to be installed
+     * @param recursive set to {@code true} to also install subpackages
+     * @param autosave number of changes between session saves.
+     * @param acHandling Access Control Handling value {@link ACHandling}. Unspecified if {@code null}.
+     * @param listener response progress listener
+     * @return detailed service response
+     * @throws Exception
+     */
+    DetailedResponse install(PackId packageId, boolean recursive, int autosave,
+                 ACHandling acHandling, ResponseProgressListener listener) throws Exception;
+
+    /**
+     * Performs a dryRun of an installation of the specified package
+     * @param packageId
+     * @return
+     * @throws Exception
+     */
+    DetailedResponse dryRun(PackId packageId) throws Exception;
+
+    DetailedResponse dryRun(PackId packageId, ResponseProgressListener listener) throws Exception;
+
+    DetailedResponse build(PackId packageId) throws Exception;
+
+    DetailedResponse build(PackId packageId, ResponseProgressListener listener) throws Exception;
+
+    DetailedResponse rewrap(PackId packageId) throws Exception;
+
+    DetailedResponse rewrap(PackId packageId, ResponseProgressListener listener) throws Exception;
+
+    DetailedResponse uninstall(PackId packageId) throws Exception;
+
+    DetailedResponse uninstall(PackId packageId, ResponseProgressListener listener) throws Exception;
 }

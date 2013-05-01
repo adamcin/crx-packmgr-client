@@ -1,9 +1,6 @@
 package net.adamcin.packmgr.http4;
 
-import net.adamcin.packmgr.ACHandling;
-import net.adamcin.packmgr.AbstractPackmgrClient;
-import net.adamcin.packmgr.PackId;
-import net.adamcin.packmgr.SimpleResponse;
+import net.adamcin.packmgr.*;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -29,6 +26,8 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +36,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 
 public final class Http4PackmgrClient extends AbstractPackmgrClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Http4PackmgrClient.class);
 
     public static final UsernamePasswordCredentials DEFAULT_CREDENTIALS =
             new UsernamePasswordCredentials(DEFAULT_USERNAME, DEFAULT_PASSWORD);
@@ -153,6 +153,21 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
         return getClient().execute(request, SIMPLE_RESPONSE_HANDLER, getHttpContext());
     }
 
+    private DetailedResponse executeDetailedRequest(final HttpUriRequest request, final ResponseProgressListener listener) throws Exception {
+        return getClient().execute(request, new ResponseHandler<DetailedResponse>() {
+                @Override public DetailedResponse handleResponse(final HttpResponse response)
+                        throws ClientProtocolException, IOException {
+                    StatusLine statusLine = response.getStatusLine();
+                    return parseDetailedResponse(
+                            statusLine.getStatusCode(),
+                            statusLine.getReasonPhrase(),
+                            response.getEntity().getContent(),
+                            getResponseEncoding(response),
+                            listener);
+                }
+            }, getHttpContext());
+    }
+
     @Override
     public boolean existsOnServer(PackId packageId) throws Exception {
         if (packageId == null) {
@@ -173,7 +188,7 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
     }
 
     @Override
-    public SimpleResponse upload(final File file, final PackId packageId, final boolean force) throws Exception {
+    public SimpleResponse upload(final File file, final boolean force, final PackId packageId) throws Exception {
         if (file == null) {
             throw new NullPointerException("file");
         }
@@ -194,15 +209,24 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
     }
 
     @Override
-    public SimpleResponse install(final PackId packageId,
+    public DetailedResponse install(final PackId packageId,
                                   final boolean recursive,
                                   final int autosave,
                                   final ACHandling acHandling) throws Exception {
+        return this.install(packageId, recursive, autosave, acHandling, null);
+    }
+
+    @Override
+    public DetailedResponse install(final PackId packageId,
+                                    final boolean recursive,
+                                    final int autosave,
+                                    final ACHandling acHandling,
+                                    final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        HttpPost request = new HttpPost(getJsonUrl(packageId));
+        HttpPost request = new HttpPost(getHtmlUrl(packageId));
 
         ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
 
@@ -214,16 +238,21 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
 
         request.setEntity(entity);
 
-        return executeSimpleRequest(request);
+        return executeDetailedRequest(request, listener);
     }
 
     @Override
-    public SimpleResponse build(final PackId packageId) throws Exception {
+    public DetailedResponse build(final PackId packageId) throws Exception {
+        return this.build(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse build(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        HttpPost request = new HttpPost(getJsonUrl(packageId));
+        HttpPost request = new HttpPost(getHtmlUrl(packageId));
 
         ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
 
@@ -233,16 +262,21 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
 
         request.setEntity(entity);
 
-        return executeSimpleRequest(request);
+        return executeDetailedRequest(request, listener);
     }
 
     @Override
-    public SimpleResponse rewrap(PackId packageId) throws Exception {
+    public DetailedResponse rewrap(PackId packageId) throws Exception {
+        return this.rewrap(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse rewrap(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        HttpPost request = new HttpPost(getJsonUrl(packageId));
+        HttpPost request = new HttpPost(getHtmlUrl(packageId));
 
         ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
 
@@ -252,16 +286,21 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
 
         request.setEntity(entity);
 
-        return executeSimpleRequest(request);
+        return executeDetailedRequest(request, listener);
     }
 
     @Override
-    public SimpleResponse uninstall(PackId packageId) throws Exception {
+    public DetailedResponse uninstall(PackId packageId) throws Exception {
+        return this.uninstall(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse uninstall(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        HttpPost request = new HttpPost(getJsonUrl(packageId));
+        HttpPost request = new HttpPost(getHtmlUrl(packageId));
 
         ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
 
@@ -271,7 +310,7 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
 
         request.setEntity(entity);
 
-        return executeSimpleRequest(request);
+        return executeDetailedRequest(request, listener);
     }
 
     @Override
@@ -294,12 +333,17 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
     }
 
     @Override
-    public SimpleResponse dryRun(PackId packageId) throws Exception {
+    public DetailedResponse dryRun(PackId packageId) throws Exception {
+        return this.dryRun(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse dryRun(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        HttpPost request = new HttpPost(getJsonUrl(packageId));
+        HttpPost request = new HttpPost(getHtmlUrl(packageId));
 
         ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
 
@@ -309,7 +353,7 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
 
         request.setEntity(entity);
 
-        return executeSimpleRequest(request);
+        return executeDetailedRequest(request, listener);
     }
 
     @Override

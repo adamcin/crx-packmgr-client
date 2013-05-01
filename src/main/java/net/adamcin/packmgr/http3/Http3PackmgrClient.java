@@ -1,9 +1,6 @@
 package net.adamcin.packmgr.http3;
 
-import net.adamcin.packmgr.ACHandling;
-import net.adamcin.packmgr.AbstractPackmgrClient;
-import net.adamcin.packmgr.PackId;
-import net.adamcin.packmgr.SimpleResponse;
+import net.adamcin.packmgr.*;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
@@ -13,11 +10,14 @@ import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.multipart.FilePart;
 import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
 import org.apache.commons.httpclient.methods.multipart.Part;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 
 public final class Http3PackmgrClient extends AbstractPackmgrClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Http3PackmgrClient.class);
 
     public static final UsernamePasswordCredentials DEFAULT_CREDENTIALS =
             new UsernamePasswordCredentials(DEFAULT_USERNAME, DEFAULT_PASSWORD);
@@ -80,6 +80,15 @@ public final class Http3PackmgrClient extends AbstractPackmgrClient {
                 request.getResponseCharSet());
     }
 
+    private DetailedResponse executeDetailedRequest(final HttpMethodBase request, final ResponseProgressListener listener) throws IOException {
+        int status = getClient().executeMethod(request);
+        return parseDetailedResponse(status,
+                request.getStatusText(),
+                request.getResponseBodyAsStream(),
+                request.getResponseCharSet(),
+                listener);
+    }
+
     @Override
     public boolean existsOnServer(PackId packageId) throws Exception {
         if (packageId == null) {
@@ -97,7 +106,7 @@ public final class Http3PackmgrClient extends AbstractPackmgrClient {
     }
 
     @Override
-    public SimpleResponse upload(File file, PackId packageId, boolean force) throws Exception {
+    public SimpleResponse upload(File file, boolean force, PackId packageId) throws Exception {
         if (file == null) {
             throw new NullPointerException("file");
         }
@@ -118,15 +127,24 @@ public final class Http3PackmgrClient extends AbstractPackmgrClient {
     }
 
     @Override
-    public SimpleResponse install(final PackId packageId,
+    public DetailedResponse install(final PackId packageId,
                                   final boolean recursive,
                                   final int autosave,
                                   final ACHandling acHandling) throws Exception {
+        return this.install(packageId, recursive, autosave, acHandling, null);
+    }
+
+    @Override
+    public DetailedResponse install(final PackId packageId,
+                                    final boolean recursive,
+                                    final int autosave,
+                                    final ACHandling acHandling,
+                                    final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        final PostMethod request = new PostMethod(getJsonUrl(packageId));
+        final PostMethod request = new PostMethod(getHtmlUrl(packageId));
 
         request.addParameter(KEY_CMD, CMD_INSTALL);
         request.addParameter(KEY_RECURSIVE, Boolean.toString(recursive));
@@ -137,58 +155,73 @@ public final class Http3PackmgrClient extends AbstractPackmgrClient {
         }
 
         try {
-            return executeSimpleRequest(request);
+            return executeDetailedRequest(request, listener);
         } finally {
             request.releaseConnection();
         }
     }
 
     @Override
-    public SimpleResponse build(PackId packageId) throws Exception {
+    public DetailedResponse build(PackId packageId) throws Exception {
+        return this.build(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse build(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        final PostMethod request = new PostMethod(getJsonUrl(packageId));
+        final PostMethod request = new PostMethod(getHtmlUrl(packageId));
 
         request.addParameter(KEY_CMD, CMD_BUILD);
 
         try {
-            return executeSimpleRequest(request);
+            return executeDetailedRequest(request, listener);
         } finally {
             request.releaseConnection();
         }
     }
 
     @Override
-    public SimpleResponse rewrap(PackId packageId) throws Exception {
+    public DetailedResponse rewrap(PackId packageId) throws Exception {
+        return this.rewrap(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse rewrap(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        final PostMethod request = new PostMethod(getJsonUrl(packageId));
+        final PostMethod request = new PostMethod(getHtmlUrl(packageId));
 
         request.addParameter(KEY_CMD, CMD_REWRAP);
 
         try {
-            return executeSimpleRequest(request);
+            return executeDetailedRequest(request, listener);
         } finally {
             request.releaseConnection();
         }
     }
 
     @Override
-    public SimpleResponse uninstall(PackId packageId) throws Exception {
+    public DetailedResponse uninstall(final PackId packageId) throws Exception {
+        return this.uninstall(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse uninstall(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        final PostMethod request = new PostMethod(getJsonUrl(packageId));
+        final PostMethod request = new PostMethod(getHtmlUrl(packageId));
 
         request.addParameter(KEY_CMD, CMD_UNINSTALL);
 
         try {
-            return executeSimpleRequest(request);
+            return executeDetailedRequest(request, listener);
         } finally {
             request.releaseConnection();
         }
@@ -212,17 +245,22 @@ public final class Http3PackmgrClient extends AbstractPackmgrClient {
     }
 
     @Override
-    public SimpleResponse dryRun(PackId packageId) throws Exception {
+    public DetailedResponse dryRun(final PackId packageId) throws Exception {
+        return this.dryRun(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse dryRun(final PackId packageId, final ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
 
-        final PostMethod request = new PostMethod(getJsonUrl(packageId));
+        final PostMethod request = new PostMethod(getHtmlUrl(packageId));
 
         request.addParameter(KEY_CMD, CMD_DRY_RUN);
 
         try {
-            return executeSimpleRequest(request);
+            return executeDetailedRequest(request, listener);
         } finally {
             request.releaseConnection();
         }
