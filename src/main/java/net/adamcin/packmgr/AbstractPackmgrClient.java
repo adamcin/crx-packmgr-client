@@ -20,13 +20,7 @@ import java.util.regex.Pattern;
 public abstract class AbstractPackmgrClient implements PackmgrClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractPackmgrClient.class);
 
-    public static final ResponseProgressListener DEFAULT_LISTENER = new ResponseProgressListener() {
-        @Override public void onStart(String title) { }
-        @Override public void onLog(String message) { }
-        @Override public void onMessage(String message) { }
-        @Override public void onProgress(String action, String path) { }
-        @Override public void onError(String path, String error) { }
-    };
+    public static final ResponseProgressListener DEFAULT_LISTENER = new DefaultResponseProgressListener();
 
     public static final String SERVICE_BASE_PATH = "/crx/packmgr/service";
     public static final String HTML_SERVICE_PATH = SERVICE_BASE_PATH + "/console.html";
@@ -365,6 +359,11 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
 
         @Override public long getDuration() {
             return duration;
+        }
+
+        @Override
+        public boolean hasErrors() {
+            return !success || (progressErrors != null && !progressErrors.isEmpty());
         }
 
         @Override public List<String> getProgressErrors() {

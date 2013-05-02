@@ -188,6 +188,30 @@ public final class Http4PackmgrClient extends AbstractPackmgrClient {
     }
 
     @Override
+    public DetailedResponse contents(final PackId packageId) throws Exception {
+        return this.contents(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse contents(final PackId packageId, final ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+
+        HttpPost request = new HttpPost(getHtmlUrl(packageId));
+
+        ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
+
+        pairs.add(new BasicNameValuePair(KEY_CMD, CMD_CONTENTS));
+
+        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(pairs);
+
+        request.setEntity(entity);
+
+        return executeDetailedRequest(request, listener);
+    }
+
+    @Override
     public SimpleResponse upload(final File file, final boolean force, final PackId packageId) throws Exception {
         if (file == null) {
             throw new NullPointerException("file");

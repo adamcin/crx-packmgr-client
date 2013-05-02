@@ -99,7 +99,7 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     protected final Either<? extends Exception, Boolean> checkServiceAvailability(final boolean checkTimeout,
                                                                                   final long timeoutRemaining) {
@@ -164,6 +164,23 @@ public final class AsyncPackmgrClient extends AbstractPackmgrClient {
         Request request = buildSimpleRequest(packageId).addParameter(KEY_CMD, CMD_CONTENTS).build();
 
         return executeSimpleRequest(request).isSuccess();
+    }
+
+
+    @Override
+    public DetailedResponse contents(final PackId packageId) throws Exception {
+        return this.contents(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse contents(final PackId packageId, final ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+
+        Request request = buildDetailedRequest(packageId).addParameter(KEY_CMD, CMD_CONTENTS).build();
+
+        return executeDetailedRequest(request, listener);
     }
 
     @Override

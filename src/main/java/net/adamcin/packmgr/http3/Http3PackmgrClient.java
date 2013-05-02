@@ -106,6 +106,27 @@ public final class Http3PackmgrClient extends AbstractPackmgrClient {
     }
 
     @Override
+    public DetailedResponse contents(PackId packageId) throws Exception {
+        return this.contents(packageId, null);
+    }
+
+    @Override
+    public DetailedResponse contents(final PackId packageId, final ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+
+        final PostMethod request = new PostMethod(getHtmlUrl(packageId));
+        request.addParameter(KEY_CMD, CMD_CONTENTS);
+
+        try {
+            return executeDetailedRequest(request, listener);
+        } finally {
+            request.releaseConnection();
+        }
+    }
+
+    @Override
     public SimpleResponse upload(File file, boolean force, PackId packageId) throws Exception {
         if (file == null) {
             throw new NullPointerException("file");

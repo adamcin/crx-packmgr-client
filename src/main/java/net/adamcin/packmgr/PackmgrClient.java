@@ -55,12 +55,16 @@ public interface PackmgrClient {
     SimpleResponse delete(PackId packageId) throws Exception;
 
     /**
-     *
-     * @param packageId
-     * @return
+     * Replicates the package using the server's default replication agents
+     * @param packageId {@link PackId} representing package to be replicated
+     * @return simple service response
      * @throws Exception
      */
     SimpleResponse replicate(PackId packageId) throws Exception;
+
+    DetailedResponse contents(PackId packageId) throws Exception;
+
+    DetailedResponse contents(PackId packageId, ResponseProgressListener listener) throws Exception;
 
     /**
      * Install a package that has already been uploaded to the server.
@@ -94,6 +98,13 @@ public interface PackmgrClient {
      */
     DetailedResponse dryRun(PackId packageId) throws Exception;
 
+    /**
+     *
+     * @param packageId
+     * @param listener
+     * @return
+     * @throws Exception
+     */
     DetailedResponse dryRun(PackId packageId, ResponseProgressListener listener) throws Exception;
 
     DetailedResponse build(PackId packageId) throws Exception;

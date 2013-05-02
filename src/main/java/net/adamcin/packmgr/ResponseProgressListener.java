@@ -1,5 +1,8 @@
 package net.adamcin.packmgr;
 
+/**
+ *
+ */
 public interface ResponseProgressListener {
 
     void onStart(String title);
