@@ -132,7 +132,7 @@
                 <configuration>
                     <instructions>
                         <Export-Package>
-                            net.adamcin.packmgr.*;version=${project.version}
+                            net.adamcin.crxpackage.client.*;version=${project.version}
                         </Export-Package>
                         <Import-Package>
                             com.ning.http.*;resolution:=optional,
@@ -234,27 +234,26 @@
             <groupId>com.ning</groupId>
             <artifactId>async-http-client</artifactId>
             <version>1.7.2</version>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>commons-httpclient</groupId>
             <artifactId>commons-httpclient</artifactId>
             <version>3.1</version>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.1</version>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
             <version>4.1</version>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>

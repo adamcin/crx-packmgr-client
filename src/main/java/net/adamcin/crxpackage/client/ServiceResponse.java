@@ -1,4 +1,4 @@
-package net.adamcin.packmgr;
+package net.adamcin.crxpackage.client;
 
 /**
  * The basic service response interface.

@@ -1,6 +1,8 @@
-package net.adamcin.packmgr;
+package net.adamcin.crxpackage.client;
 
 import net.adamcin.commons.testing.junit.TestBody;
+import net.adamcin.crxpackage.client.AbstractCrxPackageClient;
+import net.adamcin.crxpackage.client.PackId;
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -10,10 +12,10 @@ import java.io.*;
 
 import static org.junit.Assert.*;
 
-public abstract class AbstractPackmgrClientITBase {
+public abstract class AbstractCrxPackageClientITBase {
     public final Logger LOGGER = LoggerFactory.getLogger(getClass());
 
-    protected abstract AbstractPackmgrClient getClientImplementation();
+    protected abstract AbstractCrxPackageClient getClientImplementation();
 
     public void generateTestPackage(File packageFile) throws IOException {
         InputStream testPack = null;
@@ -120,6 +122,6 @@ public abstract class AbstractPackmgrClientITBase {
     }
 
     abstract class PackmgrClientTestBody extends TestBody {
-        AbstractPackmgrClient client = getClientImplementation();
+        AbstractCrxPackageClient client = getClientImplementation();
     }
 }

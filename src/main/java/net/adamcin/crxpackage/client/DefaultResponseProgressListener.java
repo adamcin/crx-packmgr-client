@@ -1,4 +1,4 @@
-package net.adamcin.packmgr;
+package net.adamcin.crxpackage.client;
 
 /**
  * Default do-nothing implementation of {@link ResponseProgressListener}

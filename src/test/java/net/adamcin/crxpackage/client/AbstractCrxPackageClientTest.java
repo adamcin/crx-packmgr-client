@@ -1,4 +1,4 @@
-package net.adamcin.packmgr;
+package net.adamcin.crxpackage.client;
 
 import net.adamcin.commons.testing.junit.TestBody;
 import org.apache.commons.io.IOUtils;
@@ -15,8 +15,8 @@ import java.util.Map;
 
 import static org.junit.Assert.*;
 
-public class AbstractPackmgrClientTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractPackmgrClientTest.class);
+public class AbstractCrxPackageClientTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCrxPackageClientTest.class);
 
     final String INSTALL_SUCCESS = "/install_success.html";
     final String INSTALL_SUCCESS_WITH_ERRORS = "/install_success_with_errors.html";
@@ -72,7 +72,7 @@ public class AbstractPackmgrClientTest {
         }
 
         protected DetailedResponse parse() throws IOException {
-            return AbstractPackmgrClient.parseDetailedResponse(200, "Ok", stream, "UTF-8", listener);
+            return AbstractCrxPackageClient.parseDetailedResponse(200, "Ok", stream, "UTF-8", listener);
         }
 
         @Override

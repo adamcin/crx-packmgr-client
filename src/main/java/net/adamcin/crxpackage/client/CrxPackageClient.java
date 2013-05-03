@@ -1,4 +1,4 @@
-package net.adamcin.packmgr;
+package net.adamcin.crxpackage.client;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,7 +7,7 @@ import java.io.IOException;
  * This is the Public API for a CRX Package Manager Console client. It is intended to be used for implementation of
  * higher level deployment management workflows, and therefore it does not expose any connection details.
  */
-public interface PackmgrClient {
+public interface CrxPackageClient {
 
     /**
      * Identify a CRX package based on its metadata

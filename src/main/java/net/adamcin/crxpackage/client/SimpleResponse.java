@@ -1,4 +1,4 @@
-package net.adamcin.packmgr;
+package net.adamcin.crxpackage.client;
 
 /**
  * A simple {@link ServiceResponse} interface based on the service's JSON representation

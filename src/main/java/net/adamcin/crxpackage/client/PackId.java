@@ -1,4 +1,4 @@
-package net.adamcin.packmgr;
+package net.adamcin.crxpackage.client;
 
 import com.day.jcr.vault.maven.pack.PackageId;
 

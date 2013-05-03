@@ -1,4 +1,4 @@
-package net.adamcin.packmgr;
+package net.adamcin.crxpackage.client;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -14,11 +14,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * The AbstractPackmgrClient provides constants and concrete implementations for generic method logic and response
+ * The AbstractCrxPackageClient provides constants and concrete implementations for generic method logic and response
  * handling.
  */
-public abstract class AbstractPackmgrClient implements PackmgrClient {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractPackmgrClient.class);
+public abstract class AbstractCrxPackageClient implements CrxPackageClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractCrxPackageClient.class);
 
     public static final ResponseProgressListener DEFAULT_LISTENER = new DefaultResponseProgressListener();
 
@@ -58,7 +58,6 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
     private static final Pattern PATTERN_SUCCESS = Pattern.compile("^</div><br>(.*) in (\\d+)ms\\.<br>");
 
     private String baseUrl = DEFAULT_BASE_URL;
-
 
     public void setBaseUrl(String baseUrl) {
         if (baseUrl == null) {
@@ -106,6 +105,8 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
      * @return either a throwable or a boolean
      */
     protected abstract Either<? extends Exception, Boolean> checkServiceAvailability(boolean checkTimeout, long timeoutRemaining);
+
+    protected abstract ResponseBuilder getResponseBuilder();
 
     private static boolean handleStart(String line, ResponseProgressListener listener) {
         if (line.startsWith("<body>")) {
@@ -165,8 +166,8 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
             String path = messageMatcher.group(3);
             String error = messageMatcher.group(4);
             if ("E".equals(action)) {
-                progressErrors.add(path + error);
-                listener.onError(path.trim(), error);
+                progressErrors.add(path + " " + error);
+                listener.onError(path.trim(), error.substring(1, error.length()-1));
             } else if (action.length() == 1) {
                 listener.onProgress(action, path.trim());
             } else {
@@ -203,7 +204,6 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    LOGGER.debug("[parseDetailedResponse] line={}", line);
                     if (isFailure) {
 
                         // handle failure end line
@@ -275,30 +275,6 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
                 throw new IOException("Exception encountered while parsing response.", e);
             }
         }
-    }
-
-    @Override
-    public PackId identify(File file) throws IOException {
-        return PackId.identifyPackage(file);
-    }
-
-    @Override
-    public final void waitForService(final long serviceTimeout) throws Exception {
-        boolean checkTimeout = serviceTimeout >= 0L;
-        int tries = 0;
-        final long stop = System.currentTimeMillis() + serviceTimeout;
-        Either<? extends Exception, Boolean> resp;
-        do {
-            if (checkTimeout && stop <= System.currentTimeMillis()) {
-                throw new IOException("Service timeout exceeded.");
-            }
-            Thread.sleep(Math.min(5, tries) * 1000L);
-            resp = checkServiceAvailability(checkTimeout, stop - System.currentTimeMillis());
-            if (resp.isLeft()) {
-                throw resp.getLeft();
-            }
-            tries++;
-        } while (!resp.isLeft() && !resp.getRight());
     }
 
     protected static abstract class Either<T, U> {
@@ -412,5 +388,193 @@ public abstract class AbstractPackmgrClient implements PackmgrClient {
         @Override public String toString() {
             return "{success:" + success + ", msg:\"" + message + "\", path:\"" + path + "\"}";
         }
+    }
+
+    protected static abstract class ResponseBuilder {
+        protected abstract ResponseBuilder forPackId(PackId packId);
+        protected abstract ResponseBuilder withParam(String name, String value);
+        protected abstract ResponseBuilder withParam(String name, boolean value);
+        protected abstract ResponseBuilder withParam(String name, int value);
+        protected abstract ResponseBuilder withParam(String name, File value, String mimeType) throws IOException;
+        protected abstract SimpleResponse getSimpleResponse() throws Exception;
+        protected abstract DetailedResponse getDetailedResponse(ResponseProgressListener listener) throws Exception;
+    }
+
+    //-------------------------------------------------------------------------
+    // CrxPackageClient method implementations
+    //-------------------------------------------------------------------------
+
+    @Override
+    public PackId identify(File file) throws IOException {
+        return PackId.identifyPackage(file);
+    }
+
+    @Override
+    public final void waitForService(final long serviceTimeout) throws Exception {
+        boolean checkTimeout = serviceTimeout >= 0L;
+        int tries = 0;
+        final long stop = System.currentTimeMillis() + serviceTimeout;
+        Either<? extends Exception, Boolean> resp;
+        do {
+            if (checkTimeout && stop <= System.currentTimeMillis()) {
+                throw new IOException("Service timeout exceeded.");
+            }
+            Thread.sleep(Math.min(5, tries) * 1000L);
+            resp = checkServiceAvailability(checkTimeout, stop - System.currentTimeMillis());
+            if (resp.isLeft()) {
+                throw resp.getLeft();
+            }
+            tries++;
+        } while (!resp.isLeft() && !resp.getRight());
+    }
+
+    @Override
+    public final boolean existsOnServer(PackId packageId) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+        return getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_CONTENTS).getSimpleResponse().isSuccess();
+    }
+
+    @Override
+    public final SimpleResponse upload(File file, boolean force, PackId packageId) throws Exception {
+        if (file == null) {
+            throw new NullPointerException("file");
+        }
+        return getResponseBuilder().forPackId(packageId == null ? identify(file) : packageId)
+                .withParam(KEY_CMD, CMD_UPLOAD)
+                .withParam(KEY_PACKAGE, file, MIME_ZIP)
+                .withParam(KEY_FORCE, force)
+                .getSimpleResponse();
+    }
+
+    @Override
+    public final SimpleResponse delete(PackId packageId) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+        return getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_DELETE)
+                .getSimpleResponse();
+    }
+
+    @Override
+    public final SimpleResponse replicate(PackId packageId) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+        return getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_REPLICATE)
+                .getSimpleResponse();
+    }
+
+    @Override
+    public final DetailedResponse contents(PackId packageId) throws Exception {
+        return this.contents(packageId, null);
+    }
+
+    @Override
+    public final DetailedResponse contents(PackId packageId, ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+        return getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_CONTENTS)
+                .getDetailedResponse(listener);
+    }
+
+    @Override
+    public final DetailedResponse install(PackId packageId,
+                                          boolean recursive,
+                                          int autosave,
+                                          ACHandling acHandling) throws Exception {
+        return this.install(packageId, recursive, autosave, acHandling, null);
+    }
+
+    @Override
+    public final DetailedResponse install(PackId packageId,
+                                          boolean recursive,
+                                          int autosave,
+                                          ACHandling acHandling,
+                                          ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+
+        ResponseBuilder rb = getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_INSTALL)
+                .withParam(KEY_RECURSIVE, recursive)
+                .withParam(KEY_AUTOSAVE, Math.max(autosave, MIN_AUTOSAVE));
+
+        if (acHandling != null) {
+            rb.withParam(KEY_ACHANDLING, acHandling.name().toLowerCase());
+        }
+
+        return rb.getDetailedResponse(listener);
+    }
+
+    @Override
+    public final DetailedResponse dryRun(PackId packageId) throws Exception {
+        return this.dryRun(packageId, null);
+    }
+
+    @Override
+    public final DetailedResponse dryRun(PackId packageId, ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+
+        return getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_DRY_RUN)
+                .getDetailedResponse(listener);
+    }
+
+    @Override
+    public final DetailedResponse build(PackId packageId) throws Exception {
+        return this.build(packageId, null);
+    }
+
+    @Override
+    public final DetailedResponse build(PackId packageId, ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+
+        return getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_BUILD)
+                .getDetailedResponse(listener);
+    }
+
+    @Override
+    public final DetailedResponse rewrap(PackId packageId) throws Exception {
+        return this.rewrap(packageId, null);
+    }
+
+    @Override
+    public final DetailedResponse rewrap(PackId packageId, ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+
+        return getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_REWRAP)
+                .getDetailedResponse(listener);
+    }
+
+    @Override
+    public final DetailedResponse uninstall(PackId packageId) throws Exception {
+        return this.uninstall(packageId, null);
+    }
+
+    @Override
+    public final DetailedResponse uninstall(PackId packageId, ResponseProgressListener listener) throws Exception {
+        if (packageId == null) {
+            throw new NullPointerException("packageId");
+        }
+
+        return getResponseBuilder().forPackId(packageId)
+                .withParam(KEY_CMD, CMD_UNINSTALL)
+                .getDetailedResponse(listener);
     }
 }
