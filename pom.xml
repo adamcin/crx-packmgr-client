@@ -36,12 +36,16 @@
     </parent>
 
 	<groupId>net.adamcin</groupId>
-    <artifactId>crx-packmgr-client</artifactId>
+    <artifactId>net.adamcin.crxpackage.client</artifactId>
 	<version>0.5.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
 	<name>${project.artifactId}</name>
-    <description>Bundle implementing a client for the CRX Package Manager based on the AsyncHttpClient library</description>
+    <description>
+        Bundle providing an interface for the CRX Package Manager and three implementations, based on the
+        AsyncHttpClient (com.ning.http), Apache Commons HttpClient 3.x (org.apache.commons.httpclient), and
+        Apache Http Components 4.x (org.apache.http) libraries.
+    </description>
 
 	<properties>
 		<encoding>UTF-8</encoding>
