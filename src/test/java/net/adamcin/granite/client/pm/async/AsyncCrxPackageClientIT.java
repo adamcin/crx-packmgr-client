@@ -1,7 +1,7 @@
-package net.adamcin.crxpackage.client.async;
+package net.adamcin.granite.client.pm.async;
 
-import net.adamcin.crxpackage.client.AbstractCrxPackageClient;
-import net.adamcin.crxpackage.client.AbstractCrxPackageClientITBase;
+import net.adamcin.granite.client.pm.AbstractCrxPackageClient;
+import net.adamcin.granite.client.pm.AbstractCrxPackageClientITBase;
 
 public class AsyncCrxPackageClientIT
         extends AbstractCrxPackageClientITBase

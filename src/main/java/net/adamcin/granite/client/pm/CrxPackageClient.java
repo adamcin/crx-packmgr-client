@@ -1,4 +1,4 @@
-package net.adamcin.crxpackage.client;
+package net.adamcin.granite.client.pm;
 
 import java.io.File;
 import java.io.IOException;

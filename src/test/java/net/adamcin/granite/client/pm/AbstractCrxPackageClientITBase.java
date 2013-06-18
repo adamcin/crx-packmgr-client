@@ -1,8 +1,8 @@
-package net.adamcin.crxpackage.client;
+package net.adamcin.granite.client.pm;
 
 import net.adamcin.commons.testing.junit.TestBody;
-import net.adamcin.crxpackage.client.AbstractCrxPackageClient;
-import net.adamcin.crxpackage.client.PackId;
+import net.adamcin.granite.client.pm.AbstractCrxPackageClient;
+import net.adamcin.granite.client.pm.PackId;
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 import org.slf4j.Logger;

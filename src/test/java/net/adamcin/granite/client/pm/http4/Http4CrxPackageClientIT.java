@@ -1,7 +1,7 @@
-package net.adamcin.crxpackage.client.http4;
+package net.adamcin.granite.client.pm.http4;
 
-import net.adamcin.crxpackage.client.AbstractCrxPackageClient;
-import net.adamcin.crxpackage.client.AbstractCrxPackageClientITBase;
+import net.adamcin.granite.client.pm.AbstractCrxPackageClient;
+import net.adamcin.granite.client.pm.AbstractCrxPackageClientITBase;
 
 public class Http4CrxPackageClientIT extends AbstractCrxPackageClientITBase {
 

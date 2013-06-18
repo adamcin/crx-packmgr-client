@@ -1,4 +1,4 @@
-package net.adamcin.crxpackage.client;
+package net.adamcin.granite.client.pm;
 
 /**
  * A simple {@link ServiceResponse} interface based on the service's JSON representation

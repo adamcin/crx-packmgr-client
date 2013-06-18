@@ -1,8 +1,12 @@
-package net.adamcin.crxpackage.client.async;
+package net.adamcin.granite.client.pm.async;
 
 import com.ning.http.client.*;
 import com.ning.http.multipart.FilePart;
-import net.adamcin.crxpackage.client.*;
+import net.adamcin.granite.client.pm.AbstractCrxPackageClient;
+import net.adamcin.granite.client.pm.DetailedResponse;
+import net.adamcin.granite.client.pm.PackId;
+import net.adamcin.granite.client.pm.ResponseProgressListener;
+import net.adamcin.granite.client.pm.SimpleResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,7 +109,7 @@ public final class AsyncCrxPackageClient extends AbstractCrxPackageClient {
      */
     protected final Either<? extends Exception, Boolean> checkServiceAvailability(final boolean checkTimeout,
                                                                                   final long timeoutRemaining) {
-        final Request request = new RequestBuilder("GET").setUrl(getJsonUrl()).setRealm(realm).build();
+        final Request request = this.client.prepareGet(getJsonUrl()).setRealm(realm).build();
 
         try {
             final ListenableFuture<Response> future = executeRequest(request);
@@ -125,21 +129,19 @@ public final class AsyncCrxPackageClient extends AbstractCrxPackageClient {
         }
     }
 
-    private RequestBuilder buildSimpleRequest(PackId packageId) {
-        RequestBuilder builder = new RequestBuilder("POST").setRealm(realm);
+    private AsyncHttpClient.BoundRequestBuilder buildSimpleRequest(PackId packageId) {
         if (packageId != null) {
-            return builder.setUrl(getJsonUrl(packageId));
+            return this.client.preparePost(getJsonUrl(packageId)).setRealm(realm);
         } else {
-            return builder.setUrl(getJsonUrl());
+            return this.client.preparePost(getJsonUrl()).setRealm(realm);
         }
     }
 
-    private RequestBuilder buildDetailedRequest(PackId packageId) {
-        RequestBuilder builder = new RequestBuilder("POST").setRealm(realm);
+    private AsyncHttpClient.BoundRequestBuilder buildDetailedRequest(PackId packageId) {
         if (packageId != null) {
-            return builder.setUrl(getHtmlUrl(packageId));
+            return this.client.preparePost(getHtmlUrl(packageId)).setRealm(realm);
         } else {
-            return builder.setUrl(getHtmlUrl());
+            return this.client.preparePost(getHtmlUrl()).setRealm(realm);
         }
     }
 
@@ -171,7 +173,7 @@ public final class AsyncCrxPackageClient extends AbstractCrxPackageClient {
 
         @Override
         public void onThrowable(Throwable t) {
-            AsyncCrxPackageClient.this.LOGGER.debug("Caught throwable: {}", t);
+            LOGGER.debug("Caught throwable: {}", t);
         }
     }
 
@@ -216,7 +218,7 @@ public final class AsyncCrxPackageClient extends AbstractCrxPackageClient {
 
         @Override
         public SimpleResponse getSimpleResponse() throws Exception {
-            RequestBuilder requestBuilder = buildSimpleRequest(packId);
+            AsyncHttpClient.BoundRequestBuilder requestBuilder = buildSimpleRequest(packId);
             for (Map.Entry<String, String> param : this.stringParams.entrySet()) {
                 if (this.fileParams.isEmpty()) {
                     requestBuilder.addParameter(param.getKey(), param.getValue());
@@ -234,7 +236,7 @@ public final class AsyncCrxPackageClient extends AbstractCrxPackageClient {
 
         @Override
         public DetailedResponse getDetailedResponse(final ResponseProgressListener listener) throws Exception {
-            RequestBuilder requestBuilder = buildSimpleRequest(packId);
+            AsyncHttpClient.BoundRequestBuilder requestBuilder = buildSimpleRequest(packId);
             for (Map.Entry<String, String> param : this.stringParams.entrySet()) {
                 if (this.fileParams.isEmpty()) {
                     requestBuilder.addParameter(param.getKey(), param.getValue());

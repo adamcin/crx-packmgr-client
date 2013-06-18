@@ -1,4 +1,4 @@
-package net.adamcin.crxpackage.client;
+package net.adamcin.granite.client.pm;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -404,13 +404,17 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
     // CrxPackageClient method implementations
     //-------------------------------------------------------------------------
 
-    @Override
-    public PackId identify(File file) throws IOException {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public PackId identify(File file) throws IOException {
         return PackId.identifyPackage(file);
     }
 
-    @Override
-    public final void waitForService(final long serviceTimeout) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final void waitForService(final long serviceTimeout) throws Exception {
         boolean checkTimeout = serviceTimeout >= 0L;
         int tries = 0;
         final long stop = System.currentTimeMillis() + serviceTimeout;
@@ -428,8 +432,10 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
         } while (!resp.isLeft() && !resp.getRight());
     }
 
-    @Override
-    public final boolean existsOnServer(PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final boolean existsOnServer(PackId packageId) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
@@ -437,8 +443,10 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
                 .withParam(KEY_CMD, CMD_CONTENTS).getSimpleResponse().isSuccess();
     }
 
-    @Override
-    public final SimpleResponse upload(File file, boolean force, PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final SimpleResponse upload(File file, boolean force, PackId packageId) throws Exception {
         if (file == null) {
             throw new NullPointerException("file");
         }
@@ -449,8 +457,10 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
                 .getSimpleResponse();
     }
 
-    @Override
-    public final SimpleResponse delete(PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final SimpleResponse delete(PackId packageId) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
@@ -459,8 +469,10 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
                 .getSimpleResponse();
     }
 
-    @Override
-    public final SimpleResponse replicate(PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final SimpleResponse replicate(PackId packageId) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
@@ -469,13 +481,17 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
                 .getSimpleResponse();
     }
 
-    @Override
-    public final DetailedResponse contents(PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse contents(PackId packageId) throws Exception {
         return this.contents(packageId, null);
     }
 
-    @Override
-    public final DetailedResponse contents(PackId packageId, ResponseProgressListener listener) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse contents(PackId packageId, ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
@@ -484,16 +500,20 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
                 .getDetailedResponse(listener);
     }
 
-    @Override
-    public final DetailedResponse install(PackId packageId,
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse install(PackId packageId,
                                           boolean recursive,
                                           int autosave,
                                           ACHandling acHandling) throws Exception {
         return this.install(packageId, recursive, autosave, acHandling, null);
     }
 
-    @Override
-    public final DetailedResponse install(PackId packageId,
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse install(PackId packageId,
                                           boolean recursive,
                                           int autosave,
                                           ACHandling acHandling,
@@ -514,13 +534,17 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
         return rb.getDetailedResponse(listener);
     }
 
-    @Override
-    public final DetailedResponse dryRun(PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse dryRun(PackId packageId) throws Exception {
         return this.dryRun(packageId, null);
     }
 
-    @Override
-    public final DetailedResponse dryRun(PackId packageId, ResponseProgressListener listener) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse dryRun(PackId packageId, ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
@@ -530,13 +554,17 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
                 .getDetailedResponse(listener);
     }
 
-    @Override
-    public final DetailedResponse build(PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse build(PackId packageId) throws Exception {
         return this.build(packageId, null);
     }
 
-    @Override
-    public final DetailedResponse build(PackId packageId, ResponseProgressListener listener) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse build(PackId packageId, ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
@@ -546,13 +574,17 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
                 .getDetailedResponse(listener);
     }
 
-    @Override
-    public final DetailedResponse rewrap(PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse rewrap(PackId packageId) throws Exception {
         return this.rewrap(packageId, null);
     }
 
-    @Override
-    public final DetailedResponse rewrap(PackId packageId, ResponseProgressListener listener) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse rewrap(PackId packageId, ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }
@@ -562,13 +594,17 @@ public abstract class AbstractCrxPackageClient implements CrxPackageClient {
                 .getDetailedResponse(listener);
     }
 
-    @Override
-    public final DetailedResponse uninstall(PackId packageId) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse uninstall(PackId packageId) throws Exception {
         return this.uninstall(packageId, null);
     }
 
-    @Override
-    public final DetailedResponse uninstall(PackId packageId, ResponseProgressListener listener) throws Exception {
+    /**
+     * {@inheritDoc}
+     */
+    @Override public final DetailedResponse uninstall(PackId packageId, ResponseProgressListener listener) throws Exception {
         if (packageId == null) {
             throw new NullPointerException("packageId");
         }

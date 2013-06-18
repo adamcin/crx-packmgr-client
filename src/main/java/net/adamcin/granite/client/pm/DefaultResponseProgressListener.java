@@ -1,4 +1,4 @@
-package net.adamcin.crxpackage.client;
+package net.adamcin.granite.client.pm;
 
 /**
  * Default do-nothing implementation of {@link ResponseProgressListener}

@@ -1,4 +1,4 @@
-package net.adamcin.crxpackage.client;
+package net.adamcin.granite.client.pm;
 
 import net.adamcin.commons.testing.junit.TestBody;
 import org.apache.commons.io.IOUtils;

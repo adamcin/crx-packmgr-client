@@ -1,6 +1,10 @@
-package net.adamcin.crxpackage.client.http3;
+package net.adamcin.granite.client.pm.http3;
 
-import net.adamcin.crxpackage.client.*;
+import net.adamcin.granite.client.pm.AbstractCrxPackageClient;
+import net.adamcin.granite.client.pm.DetailedResponse;
+import net.adamcin.granite.client.pm.PackId;
+import net.adamcin.granite.client.pm.ResponseProgressListener;
+import net.adamcin.granite.client.pm.SimpleResponse;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
